@@ -1,5 +1,4 @@
-" tabline.vim - Show current tab's buffers on the left, all tabs on the right
-" Based on ap/vim-buftabline
+" tabline.vim - Show all buffers on the left, all tabs on the right
 " License: The MIT License (MIT)
 
 if exists('g:tabline_plugin_loaded') || v:version < 700
