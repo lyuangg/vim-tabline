@@ -35,20 +35,23 @@ Copy `plugin/tabline.vim` to `~/.vim/plugin/`.
 ## Configuration
 
 ```vim
-" Show behavior: 0=never, 1=when >1 buffer, 2=always
+" Show behavior: 0=never, 1=when >1 buffer, 2=always (default: 1)
 let g:buftabline_show = 1
 
-" Number display: 0=none, 1=buffer number, 2=ordinal number
+" Number display: 0=none, 1=buffer number, 2=ordinal number (default: 2)
 let g:buftabline_numbers = 2
 
-" Show modified indicator (+ prefix)
+" Show modified indicator (+ prefix) (default: 1)
 let g:buftabline_indicators = 1
 
-" Ignore buffers with these filetypes
+" Ignore buffers with these filetypes (default: ['help', 'nerdtree'])
 let g:buftabline_ignore_filetype = ['help', 'nerdtree']
 
 " Max number of <Plug>BufTabLine.Go(N) mappings (default: 9)
 let g:buftabline_plug_max = 9
+
+" Enable default <leader>1~9 key mappings (default: 1)
+let g:buftabline_key_mappings = 1
 ```
 
 ## Key Mappings
@@ -60,9 +63,16 @@ The plugin defines these `<Plug>` mappings for keyboard access:
 | `<Plug>BufTabLine.Go(1)` ~ `<Plug>BufTabLine.Go(N)` | Go to Nth buffer |
 | `<Plug>BufTabLine.Go(-1)` | Go to last buffer |
 
-Example vimrc mappings:
+By default, `<leader>1` to `<leader>9` are mapped automatically. To disable:
 
 ```vim
+let g:buftabline_key_mappings = 0
+```
+
+To customize:
+
+```vim
+let g:buftabline_key_mappings = 0
 nmap <leader>1 <Plug>BufTabLine.Go(1)
 nmap <leader>2 <Plug>BufTabLine.Go(2)
 " ...

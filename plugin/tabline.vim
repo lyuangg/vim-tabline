@@ -18,11 +18,12 @@ hi default link BufTabLineModifiedActive  BufTabLineActive
 hi default link BufTabLineModifiedHidden  BufTabLineHidden
 
 " Options {{{1
-let g:buftabline_numbers         = get(g:, 'buftabline_numbers',    0)
-let g:buftabline_indicators      = get(g:, 'buftabline_indicators', 0)
-let g:buftabline_show            = get(g:, 'buftabline_show',       2)
-let g:buftabline_ignore_filetype = get(g:, 'buftabline_ignore_filetype', [])
+let g:buftabline_numbers         = get(g:, 'buftabline_numbers',    2)
+let g:buftabline_indicators      = get(g:, 'buftabline_indicators', 1)
+let g:buftabline_show            = get(g:, 'buftabline_show',       1)
+let g:buftabline_ignore_filetype = get(g:, 'buftabline_ignore_filetype', ['help', 'nerdtree'])
 let g:buftabline_plug_max        = get(g:, 'buftabline_plug_max',  9)
+let g:buftabline_key_mappings    = get(g:, 'buftabline_key_mappings', 1)
 
 " Click handlers {{{1
 function! BufTabLineBufClick(id, clicks, button, mods) abort
@@ -155,3 +156,11 @@ for s:n in range(1, g:buftabline_plug_max) + (g:buftabline_plug_max > 0 ? [-1] :
   execute printf("noremap <silent> <Plug>BufTabLine.Go(%d) :<C-U>exe 'b'.get(BufTabLineCurrentTabBuffers(),%d,'')<cr>", s:n, s:b)
 endfor
 unlet! s:n s:b
+
+" Default key mappings {{{1
+if g:buftabline_key_mappings
+  for s:n in range(1, g:buftabline_plug_max)
+    execute printf('nmap <leader>%d <Plug>BufTabLine.Go(%d)', s:n, s:n)
+  endfor
+  unlet! s:n
+endif
