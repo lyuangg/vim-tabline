@@ -54,9 +54,9 @@ let g:buftabline_plug_max = 9
 " Enable default <leader>1~9 key mappings (default: 1)
 let g:buftabline_key_mappings = 1
 
-" Max buffer entries to show in tabline. 0 = unlimited.
-" When exceeded, buffers are centered on the current one with … indicators. (default: 20)
-let g:buftabline_max_buffers = 20
+" Max buffer entries to show. 0 = auto (truncate by available width).
+" When truncation occurs, buffers are centered on the current one with … indicators. (default: 0)
+let g:buftabline_max_buffers = 0
 
 " Max label length for buffer names. 0 = unlimited. (default: 30)
 let g:buftabline_max_label_length = 30
