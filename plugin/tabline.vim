@@ -46,12 +46,13 @@ function! BufTabLineCurrentTabBuffers() abort
   if exists('*getbufinfo')
     " Fast path (Vim 7.4.2231+): C-level buffer enumeration
     for info in getbufinfo({'buflisted': 1})
-      if info.buftype ==# 'quickfix' | continue | endif
+      if get(info, 'buftype', '') ==# 'quickfix' | continue | endif
+      let ftype = get(info, 'filetype', '')
       if !empty(g:buftabline_ignore_filetype)
-            \ && index(g:buftabline_ignore_filetype, info.filetype) >= 0
+            \ && index(g:buftabline_ignore_filetype, ftype) >= 0
         continue
       endif
-      call add(result, {'num': info.bufnr, 'mod': info.changed})
+      call add(result, {'num': info.bufnr, 'mod': get(info, 'changed', 0)})
     endfor
   else
     " Fallback for older Vim: iterate buffer number range
