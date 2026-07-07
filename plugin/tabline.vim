@@ -30,6 +30,9 @@ let g:buftabline_max_label_length = get(g:, 'buftabline_max_label_length', 30)
 " Click handlers {{{1
 function! BufTabLineBufClick(id, clicks, button, mods) abort
   execute 'buffer' a:id
+  " Force tabline redraw — Vim may not re-evaluate %! expression
+  " fast enough after buffer switch from a tablineat click
+  redrawtabline
 endfunction
 
 function! BufTabLineTabClick(id, clicks, button, mods) abort
@@ -204,6 +207,7 @@ augroup BufTabLinePlugin
   autocmd!
   autocmd VimEnter   * call BufTabLineUpdate()
   autocmd TabEnter   * call BufTabLineUpdate()
+  autocmd BufEnter   * call BufTabLineUpdate()
   autocmd BufAdd     * call BufTabLineUpdate()
   autocmd BufDelete  * call BufTabLineUpdate(str2nr(expand('<abuf>')))
   autocmd FileType qf call BufTabLineUpdate()
