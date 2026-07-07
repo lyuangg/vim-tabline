@@ -10,6 +10,7 @@ Show all listed buffers on the left side of the tabline and all tabs on the righ
 - Right side: all tab pages (clickable to switch)
 - Buffer number or ordinal number display
 - Modified buffer indicator (`+` prefix and `Modified*` highlight)
+- **Smart truncation**: when buffer count or filenames overflow the tabline, buffers are centered on the current one with `…` indicators
 - Configurable show/hide behavior
 - Click-to-switch via `tablineat` (when available)
 - Keyboard mappings via `<Plug>BufTabLine.Go(N)`
@@ -52,6 +53,13 @@ let g:buftabline_plug_max = 9
 
 " Enable default <leader>1~9 key mappings (default: 1)
 let g:buftabline_key_mappings = 1
+
+" Max buffer entries to show in tabline. 0 = unlimited.
+" When exceeded, buffers are centered on the current one with … indicators. (default: 20)
+let g:buftabline_max_buffers = 20
+
+" Max label length for buffer names. 0 = unlimited. (default: 30)
+let g:buftabline_max_label_length = 30
 ```
 
 ## Key Mappings

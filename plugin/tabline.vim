@@ -18,12 +18,14 @@ hi default link BufTabLineModifiedActive  BufTabLineActive
 hi default link BufTabLineModifiedHidden  BufTabLineHidden
 
 " Options {{{1
-let g:buftabline_numbers         = get(g:, 'buftabline_numbers',    2)
-let g:buftabline_indicators      = get(g:, 'buftabline_indicators', 1)
-let g:buftabline_show            = get(g:, 'buftabline_show',       1)
-let g:buftabline_ignore_filetype = get(g:, 'buftabline_ignore_filetype', ['help', 'nerdtree'])
-let g:buftabline_plug_max        = get(g:, 'buftabline_plug_max',  9)
-let g:buftabline_key_mappings    = get(g:, 'buftabline_key_mappings', 1)
+let g:buftabline_numbers          = get(g:, 'buftabline_numbers',         2)
+let g:buftabline_indicators       = get(g:, 'buftabline_indicators',      1)
+let g:buftabline_show             = get(g:, 'buftabline_show',            1)
+let g:buftabline_ignore_filetype  = get(g:, 'buftabline_ignore_filetype', ['help', 'nerdtree'])
+let g:buftabline_plug_max         = get(g:, 'buftabline_plug_max',       9)
+let g:buftabline_key_mappings     = get(g:, 'buftabline_key_mappings',    1)
+let g:buftabline_max_buffers      = get(g:, 'buftabline_max_buffers',    20)
+let g:buftabline_max_label_length = get(g:, 'buftabline_max_label_length', 30)
 
 " Click handlers {{{1
 function! BufTabLineBufClick(id, clicks, button, mods) abort
@@ -50,21 +52,72 @@ function! BufTabLineCurrentTabBuffers() abort
   return result
 endfunction
 
+" Truncate a label to maxlen characters, appending '…' when truncated {{{1
+function! s:TruncateLabel(label, maxlen) abort
+  if a:maxlen > 0 && len(a:label) > a:maxlen
+    return a:label[: a:maxlen - 2] . '…'
+  endif
+  return a:label
+endfunction
+
 " Render {{{1
 function! BufTabLineRender() abort
   let show_num = g:buftabline_numbers == 1
   let show_ord = g:buftabline_numbers == 2
   let show_mod = g:buftabline_indicators
+  let max_buf = g:buftabline_max_buffers
+  let max_label = g:buftabline_max_label_length
 
   let curbuf = winbufnr(0)
   let curtab = tabpagenr()
 
-  let tabline = ''
-  let ordinal = 0
-
-  " Left side: current tab's buffers
+  " Build full buffer list with ordinals {{{2
+  let all_bufs = []
   for bufnum in BufTabLineCurrentTabBuffers()
-    let ordinal += 1
+    call add(all_bufs, {'num': bufnum, 'ordinal': len(all_bufs) + 1})
+  endfor
+  let total = len(all_bufs)
+
+  " Determine visible subset centered on current buffer {{{2
+  let left_dots = 0
+  let right_dots = 0
+  if max_buf > 0 && total > max_buf
+    let cur_idx = -1
+    for i in range(total)
+      if all_bufs[i].num == curbuf
+        let cur_idx = i
+        break
+      endif
+    endfor
+
+    if cur_idx >= 0
+      let half = max_buf / 2
+      let start = max([0, cur_idx - half])
+      let end = min([total, start + max_buf])
+      if end - start < max_buf
+        let start = max([0, end - max_buf])
+      endif
+      let visible = all_bufs[start : end - 1]
+      if start > 0 | let left_dots = 1 | endif
+      if end < total | let right_dots = 1 | endif
+    else
+      let visible = all_bufs[: max_buf - 1]
+      if total > max_buf | let right_dots = 1 | endif
+    endif
+  else
+    let visible = all_bufs
+  endif
+
+  " Render left side: buffers {{{2
+  let tabline = ''
+
+  if left_dots
+    let tabline .= '%#BufTabLineHidden# … '
+  endif
+
+  for entry in visible
+    let bufnum = entry.num
+    let ordinal = entry.ordinal
 
     " Highlight: current vs visible in this tab vs hidden
     let hl = bufnum == curbuf ? 'Current'
@@ -81,6 +134,7 @@ function! BufTabLineRender() abort
         let label = bufpath
       endif
     endif
+    let label = s:TruncateLabel(label, max_label)
 
     " Modified highlight
     if getbufvar(bufnum, '&mod')
@@ -110,11 +164,16 @@ function! BufTabLineRender() abort
     endif
   endfor
 
-  " Explicitly set fill highlight before right-aligned tab section
+  if right_dots
+    let tabline .= '%#BufTabLineHidden# … '
+  endif
+
+  " Fill + right side: tabs {{{2
   let tabline .= '%#BufTabLineFill#%=%#BufTabLineFill#'
   for tnr in range(1, tabpagenr('$'))
     let hl = tnr == curtab ? 'Current' : 'Active'
     let label = gettabvar(tnr, 'title', 'Tab ' . tnr)
+    let label = substitute(label, '%', '%%', 'g')
     let tabline .= '%#BufTabLine' . hl . '#'
     if has('tablineat')
       let tabline .= '%' . tnr . '@BufTabLineTabClick@ ' . label . ' '
