@@ -40,18 +40,32 @@ function! BufTabLineTabClick(id, clicks, button, mods) abort
 endfunction
 
 " Get filtered list of all listed buffers {{{1
+" Returns list of dicts: [{'num': N, 'mod': 0|1}, ...]
 function! BufTabLineCurrentTabBuffers() abort
   let result = []
-  for bufnum in range(1, bufnr('$'))
-    if !buflisted(bufnum) | continue | endif
-    if getbufvar(bufnum, '&buftype') == 'quickfix' | continue | endif
-    let ftype = getbufvar(bufnum, '&filetype')
-    if !empty(g:buftabline_ignore_filetype)
-          \ && index(g:buftabline_ignore_filetype, ftype) >= 0
-      continue
-    endif
-    call add(result, bufnum)
-  endfor
+  if exists('*getbufinfo')
+    " Fast path (Vim 7.4.2231+): C-level buffer enumeration
+    for info in getbufinfo({'buflisted': 1})
+      if info.buftype ==# 'quickfix' | continue | endif
+      if !empty(g:buftabline_ignore_filetype)
+            \ && index(g:buftabline_ignore_filetype, info.filetype) >= 0
+        continue
+      endif
+      call add(result, {'num': info.bufnr, 'mod': info.changed})
+    endfor
+  else
+    " Fallback for older Vim: iterate buffer number range
+    for bufnum in range(1, bufnr('$'))
+      if !buflisted(bufnum) | continue | endif
+      if getbufvar(bufnum, '&buftype') ==# 'quickfix' | continue | endif
+      let ftype = getbufvar(bufnum, '&filetype')
+      if !empty(g:buftabline_ignore_filetype)
+            \ && index(g:buftabline_ignore_filetype, ftype) >= 0
+        continue
+      endif
+      call add(result, {'num': bufnum, 'mod': getbufvar(bufnum, '&mod')})
+    endfor
+  endif
   return result
 endfunction
 
@@ -76,7 +90,8 @@ function! BufTabLineRender() abort
 
   " ── Pre-compute all entries with widths ── {{{2
   let entries = []
-  for bufnum in BufTabLineCurrentTabBuffers()
+  for e in BufTabLineCurrentTabBuffers()
+    let bufnum = e.num
     let ordinal = len(entries) + 1
 
     " Label
@@ -89,8 +104,8 @@ function! BufTabLineRender() abort
     endif
     let label = s:TruncateLabel(label, max_label)
 
-    " Modified
-    let mod = getbufvar(bufnum, '&mod')
+    " Modified (pre-computed by BufTabLineCurrentTabBuffers)
+    let mod = e.mod
 
     " Highlight
     let hl = bufnum == curbuf ? 'Current'
@@ -147,42 +162,22 @@ function! BufTabLineRender() abort
         if entries[i].num == curbuf | let cur_idx = i | break | endif
       endfor
 
-      " Binary search for max entries that fit in avail
+      " Estimate max entries that fit by available width
       let dot_w = strwidth(' … ')
-      let hi = max_buf > 0 ? min([max_buf, total]) : total
-      let lo = 1
-      let best = 1
+      let eff_max = max_buf > 0 ? min([max_buf, total]) : total
+      if total_w > avail
+        let avg_w = total_w / total
+        let eff_max = min([eff_max, (avail - dot_w * 2) / (avg_w + 1)])
+        let eff_max = max([1, eff_max])
+      endif
 
-      while lo <= hi
-        let mid = (lo + hi) / 2
-        let half = mid / 2
-        let s = max([0, cur_idx - half])
-        let e = min([total, s + mid])
-        if e - s < mid
-          let s = max([0, e - mid])
-          let e = min([total, s + mid])
-        endif
-
-        let w = 0
-        for i in range(s, e - 1) | let w += entries[i].width | endfor
-        if s > 0 | let w += dot_w | endif
-        if e < total | let w += dot_w | endif
-
-        if w <= avail
-          let best = mid
-          let lo = mid + 1
-        else
-          let hi = mid - 1
-        endif
-      endwhile
-
-      " Apply centered truncation with best count
-      let half = best / 2
+      " Apply centered truncation
+      let half = eff_max / 2
       let show_start = max([0, cur_idx - half])
-      let show_end = min([total, show_start + best])
-      if show_end - show_start < best
-        let show_start = max([0, show_end - best])
-        let show_end = min([total, show_start + best])
+      let show_end = min([total, show_start + eff_max])
+      if show_end - show_start < eff_max
+        let show_start = max([0, show_end - eff_max])
+        let show_end = min([total, show_start + eff_max])
       endif
 
       let left_dots = show_start > 0
@@ -233,7 +228,7 @@ function! BufTabLineUpdate(...) abort
   if g:buftabline_show == 0
     set showtabline=1
   elseif g:buftabline_show == 1
-    let bufs = filter(BufTabLineCurrentTabBuffers(), 'v:val != zombie')
+    let bufs = filter(BufTabLineCurrentTabBuffers(), 'v:val.num != zombie')
     let &g:showtabline = 1 + (len(bufs) > 1)
   else
     set showtabline=2
@@ -254,7 +249,7 @@ augroup END
 " <Plug> mappings for keyboard access {{{1
 for s:n in range(1, g:buftabline_plug_max) + (g:buftabline_plug_max > 0 ? [-1] : [])
   let s:b = s:n == -1 ? -1 : s:n - 1
-  execute printf("noremap <silent> <Plug>BufTabLine.Go(%d) :<C-U>exe 'b'.get(BufTabLineCurrentTabBuffers(),%d,'')<cr>", s:n, s:b)
+  execute printf("noremap <silent> <Plug>BufTabLine.Go(%d) :<C-U>exe 'b'.get(get(BufTabLineCurrentTabBuffers(),%d,{}),'num','')<cr>", s:n, s:b)
 endfor
 unlet! s:n s:b
 
