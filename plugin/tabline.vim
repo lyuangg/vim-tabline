@@ -28,16 +28,26 @@ let g:buftabline_max_buffers      = get(g:, 'buftabline_max_buffers',    0)
 let g:buftabline_max_label_length = get(g:, 'buftabline_max_label_length', 30)
 
 " Click handlers {{{1
-function! BufTabLineBufClick(id, clicks, button, mods) abort
-  execute 'buffer' a:id
+" Vim 9.2+ passes a single dict {minwid, nclicks, button, mods, ...}.
+" Older Vim / Neovim passes (id, clicks, button, mods).
+function! BufTabLineBufClick(...) abort
+  " Resolve the buffer number from either arg convention
+  let id = a:0 == 1 ? a:1.minwid : a:1
+  execute 'buffer' id
   " Force tabline redraw — Vim may not re-evaluate %! expression
   " fast enough after buffer switch from a tablineat click
   redrawtabline
 endfunction
 
-function! BufTabLineTabClick(id, clicks, button, mods) abort
-  execute 'tabnext' a:id
+function! BufTabLineTabClick(...) abort
+  let id = a:0 == 1 ? a:1.minwid : a:1
+  execute 'tabnext' id
 endfunction
+
+" Clickable tabline format:
+" - Vim 9.0+ uses %N[FuncName] (bracket syntax, built-in)
+" - Vim 7.4/8.x uses %N@FuncName@ (if compiled with +tablineat)
+let g:buftabline_can_click = v:version >= 900 || has('tablineat')
 
 " Get filtered list of all listed buffers {{{1
 " Returns list of dicts: [{'num': N, 'mod': 0|1}, ...]
@@ -195,8 +205,12 @@ function! BufTabLineRender() abort
     let e = entries[i]
     let display = substitute(e.display, '%', '%%', 'g')
     let tabline .= '%#BufTabLine' . e.hl . '#'
-    if has('tablineat')
-      let tabline .= '%' . e.num . '@BufTabLineBufClick@ ' . display . ' '
+    if g:buftabline_can_click
+      if v:version >= 900
+        let tabline .= '%' . e.num . '[BufTabLineBufClick] ' . display . ' '
+      else
+        let tabline .= '%' . e.num . '@BufTabLineBufClick@ ' . display . ' '
+      endif
     else
       let tabline .= ' ' . display . ' '
     endif
@@ -212,8 +226,12 @@ function! BufTabLineRender() abort
     let label = gettabvar(tnr, 'title', 'Tab ' . tnr)
     let label = substitute(label, '%', '%%', 'g')
     let tabline .= '%#BufTabLine' . hl . '#'
-    if has('tablineat')
-      let tabline .= '%' . tnr . '@BufTabLineTabClick@ ' . label . ' '
+    if g:buftabline_can_click
+      if v:version >= 900
+        let tabline .= '%' . tnr . '[BufTabLineTabClick] ' . label . ' '
+      else
+        let tabline .= '%' . tnr . '@BufTabLineTabClick@ ' . label . ' '
+      endif
     else
       let tabline .= ' ' . label . ' '
     endif
